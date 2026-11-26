@@ -212,15 +212,14 @@ def act_slack_open(p):
     conv = clean_conversation(p.get("conversation"))
     if not conv:
         return "Qual conversa do Slack?"
-    subprocess.run(["open", "-a", "Slack"], check=True)
+    activate("Slack")
     osa(
-        'delay 1.2\n'
         'tell application "System Events"\n'
         '  keystroke "k" using command down\n'
-        '  delay 0.6\n'
+        '  delay 0.4\n'
         f'  keystroke {json.dumps(conv)}\n'
-        '  delay 1.0\n'
-        '  key code 36\n'
+        '  delay 0.8\n'
+        '  key code 36\n'   # Slack puts the cursor in the message box
         'end tell'
     )
     return f"Slack: {conv}"
@@ -245,25 +244,51 @@ def type_text_applescript(text):
 SEND_WORDS = re.compile(r"\b(e envia|e manda|envia agora|manda agora|pode enviar|pode mandar|and send|send it|send now)\b", re.I)
 
 
+def activate(app_name):
+    """Bring an app to the front; wait only as long as needed (fast if already open)."""
+    subprocess.run(["open", "-a", app_name], check=True)
+    osa(
+        f'repeat 30 times\n'
+        f'  tell application "System Events" to if (name of first process whose frontmost is true) is {json.dumps(app_name)} then exit repeat\n'
+        f'  delay 0.1\n'
+        f'end repeat\n'
+        f'delay 0.3'
+    )
+
+
+def click_message_box(process_name):
+    """Click the message field at the bottom of the chat pane, so the person can type right away."""
+    osa(
+        'tell application "System Events"\n'
+        f'  tell process {json.dumps(process_name)}\n'
+        '    set {x, y} to position of front window\n'
+        '    set {w, h} to size of front window\n'
+        '    click at {x + (w * 0.65), y + h - 30}\n'
+        '  end tell\n'
+        'end tell'
+    )
+
+
 def act_whatsapp_open(p):
     conv = clean_conversation(p.get("conversation"))
     if not conv:
         return "Qual conversa do WhatsApp?"
-    subprocess.run(["open", "-a", "WhatsApp"], check=True)
+    activate("WhatsApp")
     osa(
-        'delay 1.5\n'
         'tell application "System Events"\n'
         '  keystroke "f" using command down\n'
-        '  delay 0.6\n'
+        '  delay 0.35\n'
         '  keystroke "a" using command down\n'
         f'  keystroke {json.dumps(conv)}\n'
-        '  delay 1.2\n'
+        '  delay 0.9\n'
         '  key code 125\n'   # down arrow: first result
-        '  delay 0.3\n'
+        '  delay 0.15\n'
         '  key code 36\n'    # return: open chat
+        '  delay 0.5\n'
         'end tell'
     )
-    return f"WhatsApp: {conv}"
+    click_message_box("WhatsApp")
+    return f"WhatsApp: {conv} (pronto para escrever)"
 
 
 def act_send_message(p):
@@ -284,7 +309,7 @@ def act_send_message(p):
         previous_clipboard = osa("the clipboard as text")
     except RuntimeError:
         previous_clipboard = None
-    osa('delay 0.8\n' + type_text_applescript(msg) +
+    osa('delay 0.2\n' + type_text_applescript(msg) +
         ('delay 0.3\ntell application "System Events" to key code 36\n' if send else ''))
     if previous_clipboard is not None:
         osa(f"delay 0.3\nset the clipboard to {json.dumps(previous_clipboard)}")
@@ -397,13 +422,55 @@ def act_unknown(p):
 ACTIONS = {name[4:]: fn for name, fn in globals().items() if name.startswith("act_")}
 
 
+# ------------------------------------------------------------------ fast path
+# Common, unambiguous commands are parsed with rules: instant, no LLM call.
+OPEN = r"(?:abre|abra|abrir|abri|open)"
+CLOSE = r"(?:fecha|feche|fechar|quit|close)"
+ART = r"(?:o|a|os|as|the)?\s*"
+WITH = r"(?:com|da|do|de|para|pra|with|to)"
+
+
+def fast_path(command):
+    c = command.strip().rstrip(".!?").strip()
+    low = norm(c)
+    m = re.fullmatch(r"(?:volume|volume em|volume no|poe o volume em|coloca o volume em)\s*(\d{1,3})(?:\s*(?:por cento|%))?", low)
+    if m:
+        return {"action": "volume", "level": m.group(1)}
+    if re.fullmatch(r"(?:aumenta|aumentar|sobe|subir|turn up)\s*(?:o\s*)?(?:volume|som)(?:\s*up)?", low):
+        return {"action": "volume", "level": "up"}
+    if re.fullmatch(r"(?:abaixa|abaixar|diminui|diminuir|baixa|turn down)\s*(?:o\s*)?(?:volume|som)", low):
+        return {"action": "volume", "level": "down"}
+    if re.fullmatch(r"(?:tira o som|muta|mute|silencia|sem som)", low):
+        return {"action": "volume", "level": "mute"}
+    if re.fullmatch(r"(?:volta o som|desmuta|unmute|liga o som)", low):
+        return {"action": "volume", "level": "unmute"}
+    if re.fullmatch(r"(?:pausa|pause|para)\s*(?:a\s*)?(?:musica|music|spotify)?", low):
+        return {"action": "spotify", "command": "pause"}
+    if re.fullmatch(r"(?:proxima|next|pula)\s*(?:a\s*)?(?:musica|track|song)?", low):
+        return {"action": "spotify", "command": "next"}
+    if re.fullmatch(r"(?:musica anterior|volta a musica|previous|previous song|anterior)", low):
+        return {"action": "spotify", "command": "previous"}
+    m = re.fullmatch(rf"{OPEN}\s+{ART}(?:whatsapp|zap)\s+(?:(?:na\s+conversa|no\s+chat)(?:\s+{WITH})?|{WITH})\s+{ART}(.+)", c, re.I)
+    if m and len(m.group(1).split()) <= 5:
+        return {"action": "whatsapp_open", "conversation": m.group(1)}
+    m = re.fullmatch(rf"{OPEN}\s+{ART}slack\s+(?:no|na|em|in)\s+(.+)", c, re.I)
+    if m:
+        return {"action": "slack_open", "conversation": m.group(1)}
+    m = re.fullmatch(rf"({OPEN}|{CLOSE})\s+{ART}(.+)", c, re.I)
+    found = find_app(m.group(2)) if m and len(m.group(2).split()) <= 3 else None
+    # Only when the spoken name clearly IS that app (no fuzzy guessing here).
+    if found and (norm(m.group(2)) in norm(found[0]) or norm(ALIASES.get(norm(m.group(2)), "")) == norm(found[0])):
+        verb = "open_app" if re.fullmatch(OPEN, m.group(1), re.I) else "quit_app"
+        return {"action": verb, "app": m.group(2)}
+    return None
+
+
 # ------------------------------------------------------------------ LLM
 def choose_action(command):
-    apps = ", ".join(sorted(installed_apps()))
     prompt = (
         "You turn a voice command (Portuguese or English) into ONE action for a Mac.\n"
-        "Pick the action and fill only its parameters. Use exact app names from the installed list when possible.\n\n"
-        f"ACTIONS:\n{ACTION_HELP}\n\nINSTALLED APPS: {apps}\n\n"
+        "Pick the action and fill only its parameters.\n\n"
+        f"ACTIONS:\n{ACTION_HELP}\n\n"
         f"COMMAND: {command}\n\nAnswer with JSON only."
     )
     body = {
@@ -426,7 +493,7 @@ def main():
         return 1
     dry = os.environ.get("VOCAL_COMMANDS_DRY_RUN") == "1"
     try:
-        choice = choose_action(command)
+        choice = fast_path(command) or choose_action(command)
     except Exception as e:  # Ollama down, bad JSON...
         log(f"ERROR choosing action for {command!r}: {e}")
         notify("Comando falhou: a IA local (Ollama) não respondeu")
