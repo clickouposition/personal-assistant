@@ -83,8 +83,13 @@ def log(msg):
         f.write(f"[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] {msg}\n")
 
 
+def q(text):
+    """AppleScript string literal (keeps accents; json.dumps would emit \\u escapes AppleScript rejects)."""
+    return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def notify(msg):
-    script = f'display notification {json.dumps(msg)} with title "VOCAL-ASSISTENT"'
+    script = f'display notification {q(msg)} with title "VOCAL-ASSISTENT"'
     subprocess.run(["osascript", "-e", script], capture_output=True)
 
 
@@ -180,7 +185,7 @@ def act_quit_app(p):
     found = find_app(p.get("app", ""))
     if not found:
         return f"Não achei o app \"{p.get('app', '')}\""
-    osa(f'tell application {json.dumps(found[0])} to quit')
+    osa(f'tell application {q(found[0])} to quit')
     return f"Fechando {found[0]}"
 
 
@@ -217,7 +222,7 @@ def act_slack_open(p):
         'tell application "System Events"\n'
         '  keystroke "k" using command down\n'
         '  delay 0.4\n'
-        f'  keystroke {json.dumps(conv)}\n'
+        f'  keystroke {q(conv)}\n'
         '  delay 0.8\n'
         '  key code 36\n'   # Slack puts the cursor in the message box
         'end tell'
@@ -235,7 +240,7 @@ def clean_conversation(conv):
 def type_text_applescript(text):
     """Type via the clipboard (works with accents/emoji), keeping it restorable."""
     return (
-        f'set the clipboard to {json.dumps(text)}\n'
+        f'set the clipboard to {q(text)}\n'
         'tell application "System Events" to keystroke "v" using command down\n'
     )
 
@@ -249,7 +254,7 @@ def activate(app_name):
     subprocess.run(["open", "-a", app_name], check=True)
     osa(
         f'repeat 30 times\n'
-        f'  tell application "System Events" to if (name of first process whose frontmost is true) is {json.dumps(app_name)} then exit repeat\n'
+        f'  tell application "System Events" to if (name of first process whose frontmost is true) is {q(app_name)} then exit repeat\n'
         f'  delay 0.1\n'
         f'end repeat\n'
         f'delay 0.3'
@@ -260,7 +265,7 @@ def click_message_box(process_name):
     """Click the message field at the bottom of the chat pane, so the person can type right away."""
     osa(
         'tell application "System Events"\n'
-        f'  tell process {json.dumps(process_name)}\n'
+        f'  tell process {q(process_name)}\n'
         '    set {x, y} to position of front window\n'
         '    set {w, h} to size of front window\n'
         '    click at {x + (w * 0.65), y + h - 30}\n'
@@ -279,7 +284,7 @@ def act_whatsapp_open(p):
         '  keystroke "f" using command down\n'
         '  delay 0.35\n'
         '  keystroke "a" using command down\n'
-        f'  keystroke {json.dumps(conv)}\n'
+        f'  keystroke {q(conv)}\n'
         '  delay 0.9\n'
         '  key code 125\n'   # down arrow: first result
         '  delay 0.15\n'
@@ -312,7 +317,7 @@ def act_send_message(p):
     osa('delay 0.2\n' + type_text_applescript(msg) +
         ('delay 0.3\ntell application "System Events" to key code 36\n' if send else ''))
     if previous_clipboard is not None:
-        osa(f"delay 0.3\nset the clipboard to {json.dumps(previous_clipboard)}")
+        osa(f"delay 0.3\nset the clipboard to {q(previous_clipboard)}")
     return f"{opened} — mensagem {'ENVIADA' if send else 'escrita (aperte Enter para enviar)'}"
 
 
@@ -368,7 +373,7 @@ def act_window(p):
         "full": (0, top, sw, h), "center": (sw // 6, top + h // 8, sw * 2 // 3, h * 3 // 4),
     }
     x, y, w, hh = frames[pos]
-    target = (f'process {json.dumps(found[0])}' if found else
+    target = (f'process {q(found[0])}' if found else
               'first process whose frontmost is true')
     osa(
         'tell application "System Events"\n'
