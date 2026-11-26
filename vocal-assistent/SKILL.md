@@ -29,7 +29,7 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 ## Usage to explain to the person
 
 - **Option+Space**: hold, speak, release (or tap, speak, tap again). Works in any app.
-- Start with **"Traduza para o inglês"** / **"Traduza para o português"** / **"Traduz"** to translate; otherwise it just cleans up in the spoken language.
+- Say **"Traduza para o inglês"** / **"Traduza para o português"** / **"Translate to Portuguese"** / **"Traduz"** at the start or the end to translate; otherwise it just cleans up in the spoken language.
 - Say **"formal"** for a formal tone. **Esc** cancels.
 
 ## Troubleshooting

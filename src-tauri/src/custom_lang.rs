@@ -37,37 +37,32 @@ enum Target {
     Opposite,
 }
 
-/// Cues, longest first so "traduza para o inglês" wins over "traduza".
-/// Matched against the normalized start of the transcript.
-const CUES: &[(&str, Target)] = &[
-    ("traduza para o ingles", Target::Lang(Lang::En)),
-    ("traduz para o ingles", Target::Lang(Lang::En)),
-    ("traduza pro ingles", Target::Lang(Lang::En)),
-    ("traduz pro ingles", Target::Lang(Lang::En)),
-    ("traduza pra ingles", Target::Lang(Lang::En)),
-    ("traduz pra ingles", Target::Lang(Lang::En)),
-    ("traduza para ingles", Target::Lang(Lang::En)),
-    ("traduz para ingles", Target::Lang(Lang::En)),
-    ("translate to english", Target::Lang(Lang::En)),
-    ("translate into english", Target::Lang(Lang::En)),
-    ("traduza para o portugues", Target::Lang(Lang::Pt)),
-    ("traduz para o portugues", Target::Lang(Lang::Pt)),
-    ("traduza pro portugues", Target::Lang(Lang::Pt)),
-    ("traduz pro portugues", Target::Lang(Lang::Pt)),
-    ("traduza pra portugues", Target::Lang(Lang::Pt)),
-    ("traduz pra portugues", Target::Lang(Lang::Pt)),
-    ("traduza para portugues", Target::Lang(Lang::Pt)),
-    ("traduz para portugues", Target::Lang(Lang::Pt)),
-    ("translate to portuguese", Target::Lang(Lang::Pt)),
-    ("translate into portuguese", Target::Lang(Lang::Pt)),
-    ("em ingles", Target::Lang(Lang::En)),
-    ("in english", Target::Lang(Lang::En)),
-    ("em portugues", Target::Lang(Lang::Pt)),
-    ("in portuguese", Target::Lang(Lang::Pt)),
-    ("traduzir", Target::Opposite),
-    ("traduza", Target::Opposite),
-    ("traduz", Target::Opposite),
-    ("translate", Target::Opposite),
+/// Is this (folded) word a "translate" verb? Prefix match tolerates
+/// Whisper variants: traduz/traduza/traduzir/traduzido, translate/translated/
+/// translation/translating.
+fn is_translate_verb(w: &str) -> bool {
+    w.starts_with("traduz") || w.starts_with("translat")
+}
+
+/// Language named by a (folded) word, tolerating misspellings
+/// ("portugues", "portuguese", "portuguesa", "ingles", "english").
+fn lang_word(w: &str) -> Option<Lang> {
+    if w.starts_with("portug") {
+        Some(Lang::Pt)
+    } else if w.starts_with("ingl") || w.starts_with("engl") {
+        Some(Lang::En)
+    } else {
+        None
+    }
+}
+
+/// Small words allowed inside a cue between the verb and the language:
+/// "traduza [isso] para o inglês", "translate [this] [from English] to Portuguese".
+const CUE_FILLERS: &[&str] = &[
+    "para", "pra", "pro", "p", "o", "a", "os", "as", "do", "da", "de", "em", "no", "na", "isso",
+    "isto", "aqui", "por", "favor", "texto", "mensagem", "lingua", "idioma", "brasileiro",
+    "americano", "to", "into", "in", "the", "this", "it", "from", "please", "text", "message",
+    "language", "brazilian", "american", "and",
 ];
 
 /// Lowercase and strip accents so "Traduza para o Inglês" == "traduza para o ingles".
@@ -83,41 +78,85 @@ fn fold(c: char) -> char {
     }
 }
 
-/// Words of the text, folded, with their byte end offset in the original.
-fn words_with_offsets(text: &str) -> Vec<(String, usize)> {
+/// Words of the text, folded, with their byte (start, end) offsets in the original.
+fn words_with_offsets(text: &str) -> Vec<(String, usize, usize)> {
     let mut out = Vec::new();
     let mut cur = String::new();
+    let mut start = 0;
     for (i, c) in text.char_indices() {
         if c.is_alphanumeric() {
+            if cur.is_empty() {
+                start = i;
+            }
             cur.push(fold(c));
         } else if !cur.is_empty() {
-            out.push((std::mem::take(&mut cur), i));
+            out.push((std::mem::take(&mut cur), start, i));
         }
     }
     if !cur.is_empty() {
-        out.push((cur, text.len()));
+        out.push((cur, start, text.len()));
     }
     out
 }
 
-/// If the transcript starts with a cue, return it and the remaining text.
-fn split_cue(text: &str) -> Option<(Target, &str)> {
+/// Try to read a cue starting at word `i`. Returns the target and the index
+/// of the last word that belongs to the cue.
+///
+/// Forms: "<verb> [fillers] [<lang> ...]" (the LAST language named wins, so
+/// "traduza do inglês para o português" -> Portuguese) and "em|in <lang>".
+fn parse_cue(words: &[(String, usize, usize)], i: usize) -> Option<(Target, usize)> {
+    let w = words.get(i)?.0.as_str();
+    if (w == "em" || w == "in") && words.get(i + 1).and_then(|n| lang_word(&n.0)).is_some() {
+        return Some((Target::Lang(lang_word(&words[i + 1].0)?), i + 1));
+    }
+    if !is_translate_verb(w) {
+        return None;
+    }
+    let (mut target, mut last) = (Target::Opposite, i);
+    for (j, (word, _, _)) in words.iter().enumerate().skip(i + 1).take(8) {
+        if let Some(l) = lang_word(word) {
+            target = Target::Lang(l);
+            last = j;
+        } else if !CUE_FILLERS.contains(&word.as_str()) {
+            break;
+        }
+    }
+    Some((target, last))
+}
+
+const PUNCT: &[char] = &['.', ',', ':', ';', '!', '-', '—', '?'];
+
+/// Find a translation cue at the start (optionally after "ok"/"please") or at
+/// the end of the transcript ("..., translate to Portuguese"). Returns the
+/// target and the transcript without the cue.
+fn split_cue(text: &str) -> Option<(Target, String)> {
     let words = words_with_offsets(text);
-    for (cue, target) in CUES {
-        let cue_words: Vec<&str> = cue.split(' ').collect();
-        if words.len() < cue_words.len() {
+    if words.is_empty() {
+        return None;
+    }
+    // Cue at the start.
+    let first = if matches!(words[0].0.as_str(), "ok" | "okay" | "please" | "hey") { 1 } else { 0 };
+    if let Some((target, last)) = parse_cue(&words, first) {
+        let rest = text[words[last].2..]
+            .trim_start_matches(|c: char| c.is_whitespace() || PUNCT.contains(&c));
+        return Some((target, rest.to_string()));
+    }
+    // Cue at the end: only the verb form (a sentence may naturally end in
+    // "in English"), and it must run to the last word.
+    let n = words.len();
+    for k in n.saturating_sub(9)..n {
+        if !is_translate_verb(&words[k].0) {
             continue;
         }
-        if words
-            .iter()
-            .zip(&cue_words)
-            .all(|((w, _), c)| w.as_str() == *c)
-        {
-            let end = words[cue_words.len() - 1].1;
-            let rest = text[end..].trim_start_matches(|c: char| {
-                c.is_whitespace() || matches!(c, '.' | ',' | ':' | ';' | '!' | '-' | '—')
-            });
-            return Some((*target, rest));
+        if let Some((target, last)) = parse_cue(&words, k) {
+            let trailing_ok = words[last + 1..]
+                .iter()
+                .all(|(w, _, _)| CUE_FILLERS.contains(&w.as_str()));
+            if trailing_ok && k > 0 {
+                let rest = text[..words[k].1]
+                    .trim_end_matches(|c: char| c.is_whitespace() || PUNCT.contains(&c));
+                return Some((target, rest.to_string()));
+            }
         }
     }
     None
@@ -142,7 +181,7 @@ pub fn detect(text: &str) -> Lang {
         .filter(|c| "ãõçáéíóúâêôàÃÕÇÁÉÍÓÚÂÊÔÀ".contains(*c))
         .count();
     let (mut pt, mut en) = (accents * 2, 0usize);
-    for (w, _) in words_with_offsets(text) {
+    for (w, _, _) in words_with_offsets(text) {
         if PT_WORDS.contains(&w.as_str()) {
             pt += 1;
         }
@@ -161,9 +200,9 @@ pub fn detect(text: &str) -> Lang {
 pub fn prepare(transcription: &str) -> (String, String) {
     let (target, text) = match split_cue(transcription) {
         Some((target, rest)) if !rest.trim().is_empty() => (Some(target), rest),
-        _ => (None, transcription),
+        _ => (None, transcription.to_string()),
     };
-    let source = detect(text);
+    let source = detect(&text);
     let out = match target {
         None => source,
         Some(Target::Opposite) => source.other(),
@@ -181,7 +220,7 @@ pub fn prepare(transcription: &str) -> (String, String) {
             dst = out.name()
         )
     };
-    (text.to_string(), directive)
+    (text, directive)
 }
 
 #[cfg(test)]
@@ -232,5 +271,49 @@ mod tests {
     fn cue_only_is_not_stripped_to_empty() {
         let (text, _) = run("Traduz");
         assert_eq!(text, "Traduz");
+    }
+
+    #[test]
+    fn whisper_variant_translated_to_portuguese() {
+        // Real transcript: Whisper heard "translated" instead of "translate".
+        let (text, d) = run("translated to Portuguese hey baby how are you you are the love of my life");
+        assert_eq!(text, "hey baby how are you you are the love of my life");
+        assert!(d.contains("into Brazilian Portuguese"));
+    }
+
+    #[test]
+    fn from_x_to_y_uses_last_language() {
+        let (text, d) = run("Traduza do inglês para o português. I'll send the report tomorrow");
+        assert_eq!(text, "I'll send the report tomorrow");
+        assert!(d.contains("into Brazilian Portuguese"));
+        let (_, d) = run("traduza do português para o inglês. Oi, meu amor, tudo bem?");
+        assert!(d.contains("into casual American English"));
+        let (_, d) = run("Translate this from English to Portuguese: see you tomorrow");
+        assert!(d.contains("into Brazilian Portuguese"));
+    }
+
+    #[test]
+    fn misspelled_language_and_please() {
+        let (_, d) = run("Please translate to portugues, the build is broken again");
+        assert!(d.contains("into Brazilian Portuguese"));
+        let (_, d) = run("Traduzir pro inglês: a reunião foi cancelada");
+        assert!(d.contains("into casual American English"));
+    }
+
+    #[test]
+    fn cue_at_the_end() {
+        let (text, d) = run("Hey, can you send me the slides later? Translate to Portuguese.");
+        assert_eq!(text, "Hey, can you send me the slides later");
+        assert!(d.contains("into Brazilian Portuguese"));
+        let (text, d) = run("A reunião foi cancelada, traduz pro inglês");
+        assert_eq!(text, "A reunião foi cancelada");
+        assert!(d.contains("into casual American English"));
+    }
+
+    #[test]
+    fn sentence_ending_in_language_name_is_not_a_cue() {
+        let (text, d) = run("I wrote the whole doc in English");
+        assert_eq!(text, "I wrote the whole doc in English");
+        assert!(d.contains("Do NOT translate"));
     }
 }

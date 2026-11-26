@@ -11,6 +11,8 @@ Um atalho só, **Option+Espaço**, em qualquer app (Slack, WhatsApp, e-mail, Cla
 | "**Traduza para o inglês** ..." | Tradução contextual para o inglês |
 | "**Traduza para o português** ..." | Tradução contextual para o português |
 | "**Traduz** ..." | Inverte o idioma |
+
+O pedido de tradução pode vir **no começo ou no fim** da fala e aceita variações: "traduza do inglês para o português", "translate to Portuguese", "pro inglês", "..., traduz pro inglês".
 | ... e diz "formal" | Tom formal |
 
 Tudo roda **no próprio Mac, grátis e offline**: Whisper Large v3 Turbo transcreve, e o Gemma 4 (via Ollama) corrige e traduz.
