@@ -92,6 +92,9 @@ pub struct CaptureSink {
     ready: Option<mpsc::Sender<()>>,
     samples: Vec<f32>,
     heard_sound: bool,
+    /// [custom] Auto-stop for hands-free recordings.
+    silence: crate::custom_autostop::SilenceTracker,
+    session: u32,
 }
 
 /// Spectrum window at 16 kHz: 32 ms, near the overlay's ~30 Hz refresh.
@@ -128,6 +131,8 @@ impl CaptureSink {
             ready: Some(ready),
             samples: Vec::new(),
             heard_sound: false,
+            silence: Default::default(),
+            session: crate::custom_autostop::current_session(),
         }
     }
 
@@ -191,14 +196,22 @@ impl Sink for CaptureSink {
 
         // The detector needs whole frames, so the final chunk goes in with its
         // zero padding; at most one frame of silence reaches the recording.
-        match self
+        let frame_ms = (chunk.samples.len() as u32 * 1000) / constants::WHISPER_SAMPLE_RATE;
+        let is_speech = match self
             .vad
             .detector
             .push_frame(chunk.samples)
             .unwrap_or(VadFrame::Speech(chunk.samples))
         {
-            VadFrame::Speech(frame) => Self::emit(&mut self.samples, &self.on_audio, frame),
-            VadFrame::Noise => {}
+            VadFrame::Speech(frame) => {
+                Self::emit(&mut self.samples, &self.on_audio, frame);
+                true
+            }
+            VadFrame::Noise => false,
+        };
+        // [custom] speech then silence -> stop a locked (hands-free) recording
+        if self.silence.push(is_speech, frame_ms) {
+            crate::custom_autostop::end_of_speech(self.session);
         }
     }
 }

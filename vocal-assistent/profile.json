@@ -33,5 +33,8 @@
     "id": "auto_pt_en",
     "name": "Auto PT/EN",
     "file": "prompts/auto-pt-en.txt"
-  }
+  },
+  "custom_words": [
+    "Monatela"
+  ]
 }

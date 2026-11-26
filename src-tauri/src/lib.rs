@@ -9,6 +9,7 @@ mod chinese_script;
 pub mod cli;
 mod clipboard;
 mod commands;
+mod custom_autostop; // [custom]
 mod custom_commands; // [custom]
 mod custom_lang; // [custom]
 pub mod engine_supervisor;
@@ -240,6 +241,7 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // (#1660) — see signal_handle.rs.
     #[cfg(unix)]
     signal_handle::setup_signal_handler(app_handle.clone());
+    custom_autostop::init(&app_handle); // [custom]
 
     // The macOS activation policy for a start-hidden launch is applied before
     // the event loop runs (see `apply_startup_activation_policy`), not here:

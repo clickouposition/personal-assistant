@@ -28,10 +28,10 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 
 ## Usage to explain to the person
 
-- **Option+Space**: hold, speak, release (or tap, speak, tap again). Works in any app.
+- **Option+Space**: hold, speak, release. Or tap once and speak: it stops by itself after ~1.5 s of silence. Works in any app.
 - Say **"Traduza para o inglês"** / **"Traduza para o português"** / **"Translate to Portuguese"** / **"Traduz"** at the start or the end to translate; otherwise it just cleans up in the spoken language.
 - Say **"formal"** for a formal tone. **Esc** cancels.
-- Start with **"Computador, ..."** to run a command instead of pasting: open/quit apps, open a project in VS Code or REAPER, open a Slack or WhatsApp conversation, write a message (sent only if the person says "e envia"/"and send"), control Spotify, set the volume, arrange windows, close Chrome tabs, open a site, search Google. First time with Chrome/Slack, macOS asks for **Automation** permission: the person clicks OK.
+- Start with **"Monatela, ..."** to run a command instead of pasting: open/quit apps, open a project in VS Code or REAPER, open a Slack or WhatsApp conversation, write a message (sent only if the person says "e envia"/"and send"), control Spotify, set the volume, arrange windows, close Chrome tabs, open a site, search Google. First time with Chrome/Slack, macOS asks for **Automation** permission: the person clicks OK.
 
 ## Troubleshooting
 
@@ -42,7 +42,7 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 | Shortcut does nothing | Accessibility off, or `SecureInput` in the log (a password field or Terminal "Secure Keyboard Entry" is active) |
 | Build fails with `cmake not installed` | Rerun the script (it installs CMake into `~/.local/cmake-venv`) |
 | Build fails with stale paths after moving the folder | `rm -rf <handy-source>/src-tauri/target` and rerun |
-| "Computador, ..." does nothing | Check `~/Library/Logs/com.pais.handy/vocal-commands.log`; Ollama must be running; the symlink `~/Library/Application Support/com.pais.handy/commands/vocal_commands.py` must point to the repo |
+| "Monatela, ..." does nothing | Check `~/Library/Logs/com.pais.handy/vocal-commands.log`; Ollama must be running; the symlink `~/Library/Application Support/com.pais.handy/commands/vocal_commands.py` must point to the repo |
 | "Apple Intelligence ... stubs" warning | Expected without full Xcode; this setup uses Ollama instead |
 
 Details on what was changed and why: [README.md](README.md).

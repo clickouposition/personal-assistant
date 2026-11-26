@@ -496,11 +496,13 @@ impl CoordinatorState {
         if let Some(hold) = &mut self.hold {
             debug!("Tap ({held:?}) for '{binding_id}': recording locked on until the next press");
             hold.locked = true;
+            crate::custom_autostop::recording_locked(&binding_id); // [custom]
         }
         None
     }
 
     fn on_cancel(&mut self, recording_was_active: bool) {
+        crate::custom_autostop::recording_ended(); // [custom]
         self.pending_release = None;
         // An explicit cancel abandons any remembered start too — the user
         // asked for silence, not a deferred recording.
@@ -551,6 +553,7 @@ impl CoordinatorState {
     ) -> Effect {
         self.stage = Stage::Recording(binding_id.clone());
         self.hold = Some(Hold { pressed_at, locked });
+        crate::custom_autostop::recording_started(&binding_id, locked); // [custom]
         Effect::Start {
             binding_id,
             hotkey_string,
@@ -558,6 +561,7 @@ impl CoordinatorState {
     }
 
     fn begin_processing(&mut self, binding_id: String, hotkey_string: String) -> Effect {
+        crate::custom_autostop::recording_ended(); // [custom]
         self.stage = Stage::Processing;
         self.hold = None;
         Effect::Stop {

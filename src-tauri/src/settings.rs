@@ -673,7 +673,7 @@ fn default_word_correction_threshold() -> f64 {
 }
 
 fn default_paste_delay_ms() -> u64 {
-    60
+    120 // [custom] avoid pasting the old clipboard
 }
 
 fn default_paste_delay_after_ms() -> u64 {
@@ -683,7 +683,7 @@ fn default_paste_delay_after_ms() -> u64 {
     #[cfg(target_os = "linux")]
     return 500;
     #[cfg(not(target_os = "linux"))]
-    return 60;
+    return 150; // [custom]
 }
 
 fn default_auto_submit() -> bool {
@@ -1115,7 +1115,7 @@ pub fn get_default_settings() -> AppSettings {
         overlay_position: default_overlay_position(),
         debug_mode: false,
         log_level: default_log_level(),
-        custom_words: Vec::new(),
+        custom_words: vec!["Monatela".to_string()], // [custom] palavra de ativação dos comandos
         model_unload_timeout: ModelUnloadTimeout::Never, // [custom] Whisper sempre carregado
         word_correction_threshold: default_word_correction_threshold(),
         history_limit: default_history_limit(),
@@ -1140,8 +1140,8 @@ pub fn get_default_settings() -> AppSettings {
         airpods_mode: false,
         keyboard_implementation: KeyboardImplementation::default(),
         show_tray_icon: default_show_tray_icon(),
-        paste_delay_ms: 120,        // [custom]
-        paste_delay_after_ms: 150,  // [custom]
+        paste_delay_ms: default_paste_delay_ms(),
+        paste_delay_after_ms: default_paste_delay_after_ms(),
         reliable_paste: true,       // [custom] evita colar o clipboard antigo
         typing_tool: default_typing_tool(),
         external_script_path: None,
