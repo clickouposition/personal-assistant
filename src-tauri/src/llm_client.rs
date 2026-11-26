@@ -119,6 +119,15 @@ struct ChatCompletionRequest {
     response_format: Option<ResponseFormat>,
     #[serde(flatten)]
     reasoning: ReasoningParams,
+    /// [custom] Ollama: keep the model loaded (-1 = forever) so dictation
+    /// never waits for a cold model load. Only sent to Ollama endpoints.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keep_alive: Option<i64>,
+}
+
+/// [custom] Ollama listens on port 11434 by default.
+fn is_ollama_endpoint(provider: &PostProcessProvider) -> bool {
+    provider.base_url.contains(":11434")
 }
 
 #[derive(Debug, Deserialize)]
@@ -466,6 +475,7 @@ pub async fn send_chat_completion_with_schema(
         stream: false,
         response_format,
         reasoning,
+        keep_alive: is_ollama_endpoint(provider).then_some(-1),
     };
 
     let mut response = client
@@ -741,6 +751,7 @@ mod tests {
             stream: false,
             response_format: None,
             reasoning,
+            keep_alive: None,
         };
         serde_json::to_value(&request).unwrap()
     }

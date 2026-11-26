@@ -1,3 +1,6 @@
+> **VOCAL-ASSISTENT** — this is a customized fork of Handy v0.10.2 for Portuguese/English dictation: one shortcut (Option+Space), auto language detection, translation on request, local AI cleanup (Ollama + Gemma).
+> **Install and docs:** [`vocal-assistent/README.md`](vocal-assistent/README.md) · AI agents: [`vocal-assistent/SKILL.md`](vocal-assistent/SKILL.md) · Original project: [cjpais/Handy](https://github.com/cjpais/Handy)
+
 # Handy
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)

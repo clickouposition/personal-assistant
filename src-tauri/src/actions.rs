@@ -277,6 +277,20 @@ async fn post_process_transcription(
         return PostProcessOutcome::Failed;
     }
 
+    // [custom] Decide the output language in code (translation cue + detected
+    // language) and hand the model one explicit instruction.
+    let mut prompt = prompt;
+    let routed_text: String;
+    let transcription: &str = if prompt.contains("${language_directive}") {
+        let (text, directive) = crate::custom_lang::prepare(transcription);
+        debug!("Language routing: {}", directive);
+        prompt = prompt.replace("${language_directive}", &directive);
+        routed_text = text;
+        &routed_text
+    } else {
+        transcription
+    };
+
     debug!(
         "Starting LLM post-processing with provider '{}' (model: {})",
         provider.id, model
