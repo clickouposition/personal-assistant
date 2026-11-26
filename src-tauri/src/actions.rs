@@ -474,6 +474,17 @@ pub(crate) async fn process_transcription_output(
     transcription: &str,
     post_process: bool,
 ) -> ProcessedTranscription {
+    // [custom] "Computador, ..." runs a voice command instead of pasting.
+    if let Some(command) = crate::custom_commands::command_text(transcription) {
+        crate::custom_commands::run(app, &command).await;
+        return ProcessedTranscription {
+            final_text: String::new(),
+            post_processed_text: None,
+            post_process_prompt: None,
+            post_process_failed: false,
+        };
+    }
+
     let settings = get_settings(app);
     let mut final_text = transcription.to_string();
     let mut post_processed_text: Option<String> = None;

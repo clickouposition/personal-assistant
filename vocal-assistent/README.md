@@ -11,9 +11,37 @@ Um atalho só, **Option+Espaço**, em qualquer app (Slack, WhatsApp, e-mail, Cla
 | "**Traduza para o inglês** ..." | Tradução contextual para o inglês |
 | "**Traduza para o português** ..." | Tradução contextual para o português |
 | "**Traduz** ..." | Inverte o idioma |
+| ... e diz "formal" | Tom formal |
 
 O pedido de tradução pode vir **no começo ou no fim** da fala e aceita variações: "traduza do inglês para o português", "translate to Portuguese", "pro inglês", "..., traduz pro inglês".
-| ... e diz "formal" | Tom formal |
+
+### Comandos de voz: "Computador, ..."
+
+Comece a fala com **"Computador"** (ou "Computer") e, em vez de colar texto, o Mac executa a ação:
+
+| Você fala | O que acontece |
+|---|---|
+| "Computador, abre o Slack no grupo marketing" | Abre o Slack direto na conversa |
+| "Computador, abre o projeto Cliente X no Reaper" | Acha o `.rpp` mais recente com esse nome e abre no REAPER |
+| "Computador, abre o projeto vocal assistent no VS Code" | Acha a pasta do projeto e abre no VS Code |
+| "Computador, fecha as abas do Chrome" / "fecha essa aba" / "fecha as outras abas" | Fecha abas (Cmd+Shift+T reabre) |
+| "Computador, abre o Spotify" / "fecha o Spotify" | Abre ou fecha qualquer app instalado |
+| "Computador, abre o WhatsApp na conversa com a Maria" | Abre o WhatsApp direto na conversa |
+| "Computador, manda no WhatsApp pra Maria: chego em 10 minutos" | Abre a conversa e **escreve** a mensagem (não envia) |
+| "... chego em 10 minutos **e envia**" | Escreve **e envia**. Só envia se você disser "e envia", "envia agora", "and send" |
+| "Computador, escreve no Slack no grupo marketing que o post está pronto" | Mesmo esquema, no Slack |
+| "Computador, toca Coldplay no Spotify" | Abre a busca no Spotify (clique para tocar) |
+| "Computador, pausa a música" / "próxima música" / "música anterior" | Controla o Spotify |
+| "Computador, volume 30" / "aumenta o volume" / "tira o som" | Volume do Mac |
+| "Computador, coloca o Chrome na esquerda" / "maximiza o VS Code" / "essa janela na direita" | Organiza janelas (esquerda, direita, tela cheia, centro, em cima, embaixo) |
+| "Computador, abre o YouTube" | Abre o site |
+| "Computador, pesquisa previsão do tempo" | Pesquisa no Google |
+
+O resultado aparece numa notificação do macOS. Para escrever mensagens, o texto passa pela área de transferência, que é restaurada logo depois. A IA local **só escolhe** uma ação dessa lista; o código é que executa. Nenhum comando livre é rodado, então uma transcrição errada não apaga nada. Na primeira vez que controlar o Chrome ou o Slack, o macOS pede permissão de **Automação** para o Handy: clique em **OK**.
+
+Projetos são procurados em Mesa, Documentos, Developer, Projects, Música e Downloads (até 3 níveis). Registro de tudo em `~/Library/Logs/com.pais.handy/vocal-commands.log`.
+
+**Criar uma ação nova:** em `commands/vocal_commands.py`, escreva uma função `act_<nome>(params)`, descreva em `ACTION_HELP` e acrescente o nome no `enum` do `SCHEMA`. Vale na hora, sem recompilar.
 
 Tudo roda **no próprio Mac, grátis e offline**: Whisper Large v3 Turbo transcreve, e o Gemma 4 (via Ollama) corrige e traduz.
 
@@ -59,6 +87,7 @@ Tudo marcado com `// [custom]` no código:
 | Arquivo | Mudança |
 |---|---|
 | `src-tauri/src/custom_lang.rs` | **Novo.** Detecta pedidos de tradução e o idioma falado, e manda uma ordem clara para a IA (modelos pequenos erram o idioma sozinhos). Tem testes. |
+| `src-tauri/src/custom_commands.rs` | **Novo.** Se a fala começa com "Computador", não cola: chama `commands/vocal_commands.py` (com testes) |
 | `src-tauri/src/actions.rs` | Liga a detecção de idioma ao pós-processamento (placeholder `${language_directive}` no prompt) |
 | `src-tauri/src/llm_client.rs` | Pede ao Ollama para manter o modelo sempre carregado (`keep_alive`), sem atraso de "modelo frio" |
 | `src-tauri/src/settings.rs` | Padrões: atalhos, Ollama + `gemma4:e4b`, prompt "Auto PT/EN", colagem confiável, Whisper sempre carregado, sem atualização automática |
@@ -68,6 +97,7 @@ Arquivos desta pasta:
 - `install-macos.sh`: o instalador
 - `profile.json`: configurações aplicadas pelo instalador (também valem para quem já tinha o Handy)
 - `prompts/auto-pt-en.txt`: o prompt de correção/tradução
+- `commands/vocal_commands.py`: os comandos de voz (lista de ações permitidas)
 
 ## Personalizar
 

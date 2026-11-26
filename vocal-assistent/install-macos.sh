@@ -148,6 +148,9 @@ s.update(prof)
 json.dump(data, open(path, "w"), indent=2, ensure_ascii=False)
 PY
 ok "Configurações aplicadas (cópia da anterior: settings_store.json.antes-vocal-assistent)"
+mkdir -p "$DATA/commands"
+ln -sf "$HERE/commands/vocal_commands.py" "$DATA/commands/vocal_commands.py"
+ok "Comandos de voz (\"Computador, ...\") ligados a $HERE/commands/vocal_commands.py"
 
 # ---------------------------------------------------------------- 7. abrir com o Mac
 step "7/7 Abrir junto com o Mac"
