@@ -20,7 +20,7 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 | # | Do | Check |
 |---|---|---|
 | 1 | Confirm Mac with Apple Silicon, ~20 GB free; 16 GB RAM recommended | `uname -m` = `arm64` |
-| 2 | Clone `https://github.com/clickouposition/vocal-assistent` and, from its root, run `bash vocal-assistent/install-macos.sh` (15–30 min; run it in the background and wait for it) | Ends with "Pronto!" |
+| 2 | Clone `https://github.com/clickouposition/personal-assistant` and, from its root, run `bash vocal-assistent/install-macos.sh` (15–30 min; run it in the background and wait for it) | Ends with "Pronto!" |
 | 3 | If it stops asking for **Command Line Tools**: ask the person to click *Install* in the macOS dialog, then run step 2 again | `xcode-select -p` succeeds |
 | 4 | Ask the person to enable **Handy** in *System Settings → Privacy & Security → Accessibility* (add `/Applications/Handy.app` with **+** if missing) | `grep "Shortcuts initialized successfully" ~/Library/Logs/com.pais.handy/handy.log` |
 | 5 | If shortcuts still are not registered after enabling, restart Handy: `osascript -e 'tell application id "com.pais.handy" to quit'; sleep 3; open /Applications/Handy.app` | Same log line, newer timestamp |

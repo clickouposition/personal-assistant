@@ -55,8 +55,8 @@ Tudo roda **no próprio Mac, grátis e offline**: Whisper Large v3 Turbo transcr
 ## Instalação (um comando)
 
 ```bash
-git clone https://github.com/clickouposition/vocal-assistent.git
-cd vocal-assistent
+git clone https://github.com/clickouposition/personal-assistant.git
+cd personal-assistant
 bash vocal-assistent/install-macos.sh
 ```
 
@@ -64,7 +64,7 @@ Este repositório é o Handy **v0.10.2** já com as mudanças. O instalador comp
 
 Leva de 15 a 30 minutos, quase tudo é download e compilação. Pode rodar de novo sem problema: ele pula o que já está instalado.
 
-Com uma IA (Claude Code etc.), basta pedir: *"clone github.com/clickouposition/vocal-assistent e instale seguindo vocal-assistent/SKILL.md"*.
+Com uma IA (Claude Code etc.), basta pedir: *"clone github.com/clickouposition/personal-assistant e instale seguindo vocal-assistent/SKILL.md"*.
 
 Depois, só você pode fazer estas duas coisas:
 1. **Ajustes do Sistema → Privacidade e Segurança → Acessibilidade** → ative o **Handy**
