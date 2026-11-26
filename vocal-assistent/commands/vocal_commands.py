@@ -213,10 +213,148 @@ def act_open_project(p):
     return f"Abrindo {os.path.basename(path)}{where}"
 
 
+# ------------------------------------------------------------------ Slack directory
+# Optional: with a read-only Slack user token in the Keychain (service
+# "vocal-assistent-slack"), the script knows every channel, group and DM, picks
+# the one the person meant (fuzzy + LLM, using the whole spoken command as
+# context) and opens it by deep link. Without a token it falls back to typing
+# the name into Slack's quick switcher.
+SLACK_KEYCHAIN = "vocal-assistent-slack"
+SLACK_CACHE = os.path.expanduser("~/Library/Caches/vocal-assistent/slack-directory.json")
+SLACK_CACHE_MAX_AGE = 6 * 3600
+PT_EN = {"suporte": "support", "geral": "general", "aleatorio": "random", "time": "team", "equipe": "team",
+         "vendas": "sales", "financeiro": "finance", "projeto": "project", "projetos": "projects",
+         "anuncios": "announcements", "avisos": "announcements", "duvidas": "questions", "clientes": "clients",
+         "cliente": "client", "desenvolvimento": "dev", "design": "design", "produto": "product"}
+
+
+def slack_token():
+    r = subprocess.run(["security", "find-generic-password", "-s", SLACK_KEYCHAIN, "-w"],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+
+
+def slack_api(token, method, **params):
+    url = f"https://slack.com/api/{method}?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        data = json.load(r)
+    if not data.get("ok"):
+        raise RuntimeError(f"Slack {method}: {data.get('error')}")
+    return data
+
+
+def slack_directory(refresh=False):
+    """[{id, name, kind, team}] for channels, private groups, group DMs and DMs. Cached."""
+    if not refresh and os.path.isfile(SLACK_CACHE) and \
+            datetime.datetime.now().timestamp() - os.path.getmtime(SLACK_CACHE) < SLACK_CACHE_MAX_AGE:
+        return json.load(open(SLACK_CACHE))
+    token = slack_token()
+    if not token:
+        return None
+    team = slack_api(token, "auth.test")["team_id"]
+    users, cursor = {}, ""
+    while True:
+        d = slack_api(token, "users.list", limit=500, cursor=cursor)
+        for u in d["members"]:
+            if not u.get("deleted"):
+                prof = u.get("profile", {})
+                users[u["id"]] = prof.get("display_name") or prof.get("real_name") or u.get("name")
+        cursor = d.get("response_metadata", {}).get("next_cursor")
+        if not cursor:
+            break
+    entries, cursor = [], ""
+    while True:
+        d = slack_api(token, "conversations.list", limit=1000, cursor=cursor, exclude_archived="true",
+                      types="public_channel,private_channel,mpim,im")
+        for c in d["channels"]:
+            if c.get("is_im"):
+                if c.get("user") in users:
+                    entries.append({"id": c["user"], "name": users[c["user"]], "kind": "dm", "team": team})
+            elif c.get("is_mpim"):
+                entries.append({"id": c["id"], "name": c.get("name", "").replace("mpdm-", "").replace("--", ", ").rstrip("-1"),
+                                "kind": "group-dm", "team": team})
+            else:
+                entries.append({"id": c["id"], "name": c["name"], "kind": "private" if c.get("is_private") else "channel",
+                                "team": team})
+        cursor = d.get("response_metadata", {}).get("next_cursor")
+        if not cursor:
+            break
+    os.makedirs(os.path.dirname(SLACK_CACHE), exist_ok=True)
+    json.dump(entries, open(SLACK_CACHE, "w"), ensure_ascii=False)
+    return entries
+
+
+def _words(text):
+    return {PT_EN.get(w, w) for w in norm(text).split() if len(w) > 1}
+
+
+def slack_candidates(spoken, directory, limit=12):
+    """Score entries by word overlap (with PT->EN), substring and similarity."""
+    sw = _words(spoken)
+    sn = norm(spoken).replace(" ", "")
+    scored = []
+    for e in directory:
+        en = norm(e["name"].replace("-", " ").replace("_", " "))
+        ew = _words(en)
+        overlap = len(sw & ew) + sum(0.5 for a in sw for b in ew if a != b and len(a) > 3 and (a in b or b in a))
+        ratio = difflib.SequenceMatcher(None, sn, en.replace(" ", "")).ratio()
+        score = overlap * 2 + ratio + (1 if sn and sn in en.replace(" ", "") else 0)
+        if score > 0.6:
+            scored.append((score, e))
+    scored.sort(key=lambda x: -x[0])
+    return [e for _, e in scored[:limit]]
+
+
+def slack_pick(command, spoken, candidates):
+    """Let the local LLM choose among candidates using the whole command as context."""
+    if len(candidates) == 1:
+        return candidates[0]
+    listing = "\n".join(f"{i}. {c['name']} ({c['kind']})" for i, c in enumerate(candidates))
+    prompt = ("A person asked by voice to open a Slack conversation. Pick the conversation they mean.\n"
+              "Names may be in English while the person spoke Portuguese, abbreviated or slightly misheard.\n\n"
+              f"COMMAND: {command}\nNAME SPOKEN: {spoken}\n\nCONVERSATIONS:\n{listing}\n\n"
+              "Answer with JSON {\"index\": number}, or {\"index\": -1} if none fits.")
+    body = {"model": MODEL, "messages": [{"role": "user", "content": prompt}], "stream": False, "think": False,
+            "keep_alive": -1, "options": {"temperature": 0},
+            "format": {"type": "object", "properties": {"index": {"type": "integer"}}, "required": ["index"]}}
+    req = urllib.request.Request(OLLAMA_URL, json.dumps(body).encode(), {"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        idx = json.loads(json.load(r)["message"]["content"]).get("index", -1)
+    return candidates[idx] if isinstance(idx, int) and 0 <= idx < len(candidates) else None
+
+
+def slack_resolve(command, spoken):
+    """Return the directory entry for what was spoken, or None (no token / no match)."""
+    directory = slack_directory()
+    if directory is None:
+        return None
+    cands = slack_candidates(spoken, directory)
+    if not cands:  # maybe a new channel: refresh the cache once
+        directory = slack_directory(refresh=True) or []
+        cands = slack_candidates(spoken, directory)
+    if not cands:
+        return None
+    best = slack_pick(command, spoken, cands)
+    log(f"   slack: {spoken!r} -> {[c['name'] for c in cands[:5]]} -> {best and best['name']}")
+    return best
+
+
 def act_slack_open(p):
     conv = clean_conversation(p.get("conversation"))
     if not conv:
         return "Qual conversa do Slack?"
+    try:
+        entry = slack_resolve(p.get("_command", conv), conv)
+    except Exception as e:  # network, revoked token... fall back to typing
+        log(f"   slack directory unavailable: {e}")
+        entry = None
+    if entry:
+        kind = "user" if entry["kind"] == "dm" else "channel"
+        subprocess.run(["open", f"slack://{kind}?team={entry['team']}&id={entry['id']}"], check=True)
+        activate("Slack")
+        osa("delay 0.6")
+        return f"Slack: {entry['name']}"
     activate("Slack")
     osa(
         'tell application "System Events"\n'
@@ -227,7 +365,7 @@ def act_slack_open(p):
         '  key code 36\n'   # Slack puts the cursor in the message box
         'end tell'
     )
-    return f"Slack: {conv}"
+    return f"Slack: {conv}" + ("" if slack_token() else " (busca por nome; configure a chave do Slack para achar pelo contexto)")
 
 
 def clean_conversation(conv):

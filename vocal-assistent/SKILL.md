@@ -33,6 +33,10 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 - Say **"formal"** for a formal tone. **Esc** cancels.
 - Start with **"Monatela, ..."** to run a command instead of pasting: open/quit apps, open a project in VS Code or REAPER, open a Slack or WhatsApp conversation, write a message (sent only if the person says "e envia"/"and send"), control Spotify, set the volume, arrange windows, close Chrome tabs, open a site, search Google. First time with Chrome/Slack, macOS asks for **Automation** permission: the person clicks OK.
 
+## Optional: Slack by context
+
+Ask the person if they want it. They create the app from `commands/slack-app-manifest.json` (README → "Slack pelo contexto"), copy the `xoxp-` User OAuth Token and store it themselves with `security add-generic-password -a "$USER" -s vocal-assistent-slack -U -w` (it prompts; never paste the token into chat or a file). Check with `security find-generic-password -s vocal-assistent-slack >/dev/null && echo ok`.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |

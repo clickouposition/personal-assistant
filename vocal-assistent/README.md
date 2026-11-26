@@ -41,6 +41,19 @@ O resultado aparece numa notificação do macOS. Para escrever mensagens, o text
 
 Projetos são procurados em Mesa, Documentos, Developer, Projects, Música e Downloads (até 3 níveis). Registro de tudo em `~/Library/Logs/com.pais.handy/vocal-commands.log`.
 
+**Slack pelo contexto (opcional, recomendado):** com uma chave só de leitura do Slack, o comando conhece **todos** os seus canais, grupos e DMs, entende de qual você está falando ("Wesley Chapel suporte" → `#lc-wesley-chapel-support`) e abre direto, sem digitar na busca. Sem a chave, ele digita o nome na busca do Slack.
+
+1. Abra https://api.slack.com/apps → **Create New App** → **From a manifest** → escolha o workspace.
+2. Cole o conteúdo de [`commands/slack-app-manifest.json`](commands/slack-app-manifest.json) → **Create**.
+3. **Install to Workspace** → **Allow** (em alguns workspaces o admin precisa aprovar).
+4. Em **OAuth & Permissions**, copie o **User OAuth Token** (começa com `xoxp-`).
+5. No Terminal, rode o comando abaixo e cole o token quando ele pedir (ele fica no **Keychain** do Mac, não em arquivo):
+   ```bash
+   security add-generic-password -a "$USER" -s vocal-assistent-slack -U -w
+   ```
+
+A lista fica em cache por 6 horas (e é atualizada sozinha se você falar de um canal novo). Para remover: `security delete-generic-password -s vocal-assistent-slack`.
+
 **Criar uma ação nova:** em `commands/vocal_commands.py`, escreva uma função `act_<nome>(params)`, descreva em `ACTION_HELP` e acrescente o nome no `enum` do `SCHEMA`. Vale na hora, sem recompilar.
 
 ### Segurar ou mãos livres
