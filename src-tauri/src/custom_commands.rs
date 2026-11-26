@@ -1,6 +1,6 @@
 //! [custom] Voice commands: a transcript that starts with the wake word
-//! ("Computador, ..." / "Computer, ...") is not pasted. It is handed to
-//! `<app data dir>/commands/vocal_commands.py`, which asks the local LLM to pick
+//! ("Monatela, ...") is not pasted. It is handed to
+//! `<app data dir>/commands/commands.py`, which asks the local LLM to pick
 //! ONE action from a fixed whitelist and runs it. Nothing free-form is executed.
 
 use log::{debug, error, info};
@@ -83,7 +83,7 @@ pub fn command_text(transcript: &str) -> Option<String> {
 
 fn script_path(app: &AppHandle) -> Option<PathBuf> {
     let dir = crate::portable::app_data_dir(app).ok()?;
-    let script = dir.join("commands").join("vocal_commands.py");
+    let script = dir.join("commands").join("commands.py");
     script.is_file().then_some(script)
 }
 
@@ -91,7 +91,7 @@ fn script_path(app: &AppHandle) -> Option<PathBuf> {
 /// (the script itself shows a macOS notification with the result).
 pub async fn run(app: &AppHandle, command: &str) {
     let Some(script) = script_path(app) else {
-        error!("Voice command ignored: commands/vocal_commands.py not installed");
+        error!("Voice command ignored: commands/commands.py not installed");
         return;
     };
     info!("Voice command: running {}", script.display());
@@ -131,13 +131,25 @@ mod tests {
 
     #[test]
     fn wake_word_is_detected_and_stripped() {
-        assert_eq!(command_text("Monatela, feche o WhatsApp.").as_deref(), Some("feche o WhatsApp."));
-        assert_eq!(command_text("monatela close all Chrome tabs").as_deref(), Some("close all Chrome tabs"));
+        assert_eq!(
+            command_text("Monatela, feche o WhatsApp.").as_deref(),
+            Some("feche o WhatsApp.")
+        );
+        assert_eq!(
+            command_text("monatela close all Chrome tabs").as_deref(),
+            Some("close all Chrome tabs")
+        );
     }
 
     #[test]
     fn whisper_variants_are_accepted() {
-        for t in ["Mona Tela, abre o Slack", "Monatella, abre o Slack", "Monotela abre o Slack", "Mônatela, abre o Slack", "Mona tela abre o Slack"] {
+        for t in [
+            "Mona Tela, abre o Slack",
+            "Monatella, abre o Slack",
+            "Monotela abre o Slack",
+            "Mônatela, abre o Slack",
+            "Mona tela abre o Slack",
+        ] {
             assert_eq!(command_text(t).as_deref(), Some("abre o Slack"), "{t}");
         }
     }

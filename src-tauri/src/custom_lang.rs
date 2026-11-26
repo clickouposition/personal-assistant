@@ -3,9 +3,11 @@
 //! Small local models (e.g. Gemma via Ollama) are unreliable at deciding the
 //! output language on their own: they tend to answer in English. So before the
 //! LLM call we detect, in code:
-//!   1. a spoken translation cue at the start of the transcript
-//!      ("traduza para o inglês", "em português", "translate", ...), and
-//!   2. the language the person actually spoke (simple word/accent heuristic),
+//!
+//! 1. a spoken translation cue at the start or end of the transcript
+//!    ("traduza para o inglês", "em português", "translate", ...), and
+//! 2. the language the person actually spoke (simple word/accent heuristic),
+//!
 //! and hand the model one explicit instruction through the
 //! `${language_directive}` placeholder of the prompt. The cue itself is removed
 //! from the text the model sees.
@@ -59,10 +61,45 @@ fn lang_word(w: &str) -> Option<Lang> {
 /// Small words allowed inside a cue between the verb and the language:
 /// "traduza [isso] para o inglês", "translate [this] [from English] to Portuguese".
 const CUE_FILLERS: &[&str] = &[
-    "para", "pra", "pro", "p", "o", "a", "os", "as", "do", "da", "de", "em", "no", "na", "isso",
-    "isto", "aqui", "por", "favor", "texto", "mensagem", "lingua", "idioma", "brasileiro",
-    "americano", "to", "into", "in", "the", "this", "it", "from", "please", "text", "message",
-    "language", "brazilian", "american", "and",
+    "para",
+    "pra",
+    "pro",
+    "p",
+    "o",
+    "a",
+    "os",
+    "as",
+    "do",
+    "da",
+    "de",
+    "em",
+    "no",
+    "na",
+    "isso",
+    "isto",
+    "aqui",
+    "por",
+    "favor",
+    "texto",
+    "mensagem",
+    "lingua",
+    "idioma",
+    "brasileiro",
+    "americano",
+    "to",
+    "into",
+    "in",
+    "the",
+    "this",
+    "it",
+    "from",
+    "please",
+    "text",
+    "message",
+    "language",
+    "brazilian",
+    "american",
+    "and",
 ];
 
 /// Lowercase and strip accents so "Traduza para o Inglês" == "traduza para o ingles".
@@ -135,7 +172,11 @@ fn split_cue(text: &str) -> Option<(Target, String)> {
         return None;
     }
     // Cue at the start.
-    let first = if matches!(words[0].0.as_str(), "ok" | "okay" | "please" | "hey") { 1 } else { 0 };
+    let first = if matches!(words[0].0.as_str(), "ok" | "okay" | "please" | "hey") {
+        1
+    } else {
+        0
+    };
     if let Some((target, last)) = parse_cue(&words, first) {
         let rest = text[words[last].2..]
             .trim_start_matches(|c: char| c.is_whitespace() || PUNCT.contains(&c));
@@ -276,7 +317,8 @@ mod tests {
     #[test]
     fn whisper_variant_translated_to_portuguese() {
         // Real transcript: Whisper heard "translated" instead of "translate".
-        let (text, d) = run("translated to Portuguese hey baby how are you you are the love of my life");
+        let (text, d) =
+            run("translated to Portuguese hey baby how are you you are the love of my life");
         assert_eq!(text, "hey baby how are you you are the love of my life");
         assert!(d.contains("into Brazilian Portuguese"));
     }

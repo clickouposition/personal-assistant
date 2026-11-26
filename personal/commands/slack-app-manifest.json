@@ -1,6 +1,6 @@
 {
   "display_information": {
-    "name": "VOCAL-ASSISTENT",
+    "name": "Personal Assistant",
     "description": "Read-only list of channels, groups and people so voice commands can open the right Slack conversation."
   },
   "oauth_config": {

@@ -1,5 +1,5 @@
-> **VOCAL-ASSISTENT** — this is a customized fork of Handy v0.10.2 for Portuguese/English dictation: one shortcut (Option+Space), auto language detection, translation on request, local AI cleanup (Ollama + Gemma).
-> **Install and docs:** [`vocal-assistent/README.md`](vocal-assistent/README.md) · AI agents: [`vocal-assistent/SKILL.md`](vocal-assistent/SKILL.md) · Original project: [cjpais/Handy](https://github.com/cjpais/Handy)
+> **Personal Assistant** — this is a customized fork of Handy v0.10.2 for Portuguese/English dictation: one shortcut (Option+Space), auto language detection, translation on request, local AI cleanup (Ollama + Gemma), and voice commands ("Monatela, ...").
+> **Install and docs:** [`personal/README.md`](personal/README.md) · AI agents: [`personal/SKILL.md`](personal/SKILL.md) · Original project: [cjpais/Handy](https://github.com/cjpais/Handy)
 
 # Handy
 

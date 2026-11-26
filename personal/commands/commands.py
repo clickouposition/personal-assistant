@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""VOCAL-ASSISTENT voice commands ("Computador, ...").
+"""Personal Assistant voice commands ("Monatela, ...").
 
-Handy calls:  python3 -I vocal_commands.py "<command text>"
+Handy calls:  python3 -I commands.py "<command text>"
 
 The local LLM (Ollama) only CHOOSES one action from the whitelist below and
 fills its parameters as JSON. This script validates the choice and runs it with
@@ -24,15 +24,15 @@ import urllib.parse
 import urllib.request
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = os.environ.get("VOCAL_COMMANDS_MODEL", "gemma4:e4b")
-LOG = os.path.expanduser("~/Library/Logs/com.pais.handy/vocal-commands.log")
+MODEL = os.environ.get("PERSONAL_ASSISTANT_MODEL", "gemma4:e4b")
+LOG = os.path.expanduser("~/Library/Logs/com.pais.handy/personal-assistant.log")
 PROJECT_ROOTS = ["~/Desktop", "~/Documents", "~/Developer", "~/Projects", "~/Music", "~/Downloads"]
 
 ACTION_HELP = """
 - open_app {"app"}: open an application. Ex: "abre o Slack", "open Spotify"
 - quit_app {"app"}: quit an application. Ex: "fecha o Spotify"
 - open_project {"name", "app"}: open a project folder or file by name, optionally in an app
-    (VS Code, Cursor, REAPER, Finder...). Ex: "abre o projeto vocal assistent no VS Code",
+    (VS Code, Cursor, REAPER, Finder...). Ex: "abre o projeto personal assistant no VS Code",
     "abre o projeto Cliente X no Reaper"
 - slack_open {"conversation"}: open a Slack channel, group or person. Ex: "abre o Slack no grupo marketing"
 - chrome_close_tabs {"which"}: which = "all" | "current" | "others". Ex: "fecha as abas do Chrome" -> all,
@@ -89,7 +89,7 @@ def q(text):
 
 
 def notify(msg):
-    script = f'display notification {q(msg)} with title "VOCAL-ASSISTENT"'
+    script = f'display notification {q(msg)} with title "Personal Assistant"'
     subprocess.run(["osascript", "-e", script], capture_output=True)
 
 
@@ -215,12 +215,12 @@ def act_open_project(p):
 
 # ------------------------------------------------------------------ Slack directory
 # Optional: with a read-only Slack user token in the Keychain (service
-# "vocal-assistent-slack"), the script knows every channel, group and DM, picks
+# "personal-assistant-slack"), the script knows every channel, group and DM, picks
 # the one the person meant (fuzzy + LLM, using the whole spoken command as
 # context) and opens it by deep link. Without a token it falls back to typing
 # the name into Slack's quick switcher.
-SLACK_KEYCHAIN = "vocal-assistent-slack"
-SLACK_CACHE = os.path.expanduser("~/Library/Caches/vocal-assistent/slack-directory.json")
+SLACK_KEYCHAIN = "personal-assistant-slack"
+SLACK_CACHE = os.path.expanduser("~/Library/Caches/personal/slack-directory.json")
 SLACK_CACHE_MAX_AGE = 6 * 3600
 PT_EN = {"suporte": "support", "geral": "general", "aleatorio": "random", "time": "team", "equipe": "team",
          "vendas": "sales", "financeiro": "finance", "projeto": "project", "projetos": "projects",
@@ -634,7 +634,7 @@ def main():
     command = " ".join(sys.argv[1:]).strip()
     if not command:
         return 1
-    dry = os.environ.get("VOCAL_COMMANDS_DRY_RUN") == "1"
+    dry = os.environ.get("PERSONAL_ASSISTANT_DRY_RUN") == "1"
     try:
         choice = fast_path(command) or choose_action(command)
     except Exception as e:  # Ollama down, bad JSON...

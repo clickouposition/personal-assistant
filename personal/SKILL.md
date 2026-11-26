@@ -1,9 +1,9 @@
 ---
-name: vocal-assistent
-description: Install and configure VOCAL-ASSISTENT on a Mac — a customized Handy (open-source voice dictation) with one shortcut (Option+Space) that transcribes Portuguese or English, fixes it, and translates on request ("traduza para o inglês/português"), all local via Whisper + Ollama/Gemma. Use when someone asks to install, set up, update, or troubleshoot this dictation setup.
+name: personal-assistant
+description: Install and configure Personal Assistant on a Mac — a customized Handy (open-source voice dictation) with one shortcut (Option+Space) that transcribes Portuguese or English, fixes it, and translates on request ("traduza para o inglês/português"), all local via Whisper + Ollama/Gemma. Use when someone asks to install, set up, update, or troubleshoot this dictation setup.
 ---
 
-# VOCAL-ASSISTENT: install skill
+# Personal Assistant: install skill
 
 Goal: leave the person's Mac with Handy working exactly like the reference setup, then hand over the two steps only a human can do.
 
@@ -20,7 +20,7 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 | # | Do | Check |
 |---|---|---|
 | 1 | Confirm Mac with Apple Silicon, ~20 GB free; 16 GB RAM recommended | `uname -m` = `arm64` |
-| 2 | Clone `https://github.com/clickouposition/personal-assistant` and, from its root, run `bash vocal-assistent/install-macos.sh` (15–30 min; run it in the background and wait for it) | Ends with "Pronto!" |
+| 2 | Clone `https://github.com/clickouposition/personal-assistant` and, from its root, run `bash personal/install-macos.sh` (15–30 min; run it in the background and wait for it) | Ends with "Pronto!" |
 | 3 | If it stops asking for **Command Line Tools**: ask the person to click *Install* in the macOS dialog, then run step 2 again | `xcode-select -p` succeeds |
 | 4 | Ask the person to enable **Handy** in *System Settings → Privacy & Security → Accessibility* (add `/Applications/Handy.app` with **+** if missing) | `grep "Shortcuts initialized successfully" ~/Library/Logs/com.pais.handy/handy.log` |
 | 5 | If shortcuts still are not registered after enabling, restart Handy: `osascript -e 'tell application id "com.pais.handy" to quit'; sleep 3; open /Applications/Handy.app` | Same log line, newer timestamp |
@@ -35,7 +35,7 @@ Goal: leave the person's Mac with Handy working exactly like the reference setup
 
 ## Optional: Slack by context
 
-Ask the person if they want it. They create the app from `commands/slack-app-manifest.json` (README → "Slack pelo contexto"), copy the `xoxp-` User OAuth Token and store it themselves with `security add-generic-password -a "$USER" -s vocal-assistent-slack -U -w` (it prompts; never paste the token into chat or a file). Check with `security find-generic-password -s vocal-assistent-slack >/dev/null && echo ok`.
+Ask the person if they want it. They create the app from `commands/slack-app-manifest.json` (README → "Slack pelo contexto"), copy the `xoxp-` User OAuth Token and store it themselves with `security add-generic-password -a "$USER" -s personal-assistant-slack -U -w` (it prompts; never paste the token into chat or a file). Check with `security find-generic-password -s personal-assistant-slack >/dev/null && echo ok`.
 
 ## Troubleshooting
 
@@ -46,7 +46,7 @@ Ask the person if they want it. They create the app from `commands/slack-app-man
 | Shortcut does nothing | Accessibility off, or `SecureInput` in the log (a password field or Terminal "Secure Keyboard Entry" is active) |
 | Build fails with `cmake not installed` | Rerun the script (it installs CMake into `~/.local/cmake-venv`) |
 | Build fails with stale paths after moving the folder | `rm -rf <handy-source>/src-tauri/target` and rerun |
-| "Monatela, ..." does nothing | Check `~/Library/Logs/com.pais.handy/vocal-commands.log`; Ollama must be running; the symlink `~/Library/Application Support/com.pais.handy/commands/vocal_commands.py` must point to the repo |
+| "Monatela, ..." does nothing | Check `~/Library/Logs/com.pais.handy/personal-assistant.log`; Ollama must be running; the symlink `~/Library/Application Support/com.pais.handy/commands/commands.py` must point to the repo |
 | "Apple Intelligence ... stubs" warning | Expected without full Xcode; this setup uses Ollama instead |
 
 Details on what was changed and why: [README.md](README.md).

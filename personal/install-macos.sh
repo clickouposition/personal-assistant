@@ -1,5 +1,5 @@
 #!/bin/bash
-# VOCAL-ASSISTENT: instala esta versão personalizada do Handy num Mac (Apple Silicon).
+# Personal Assistant: instala esta versão personalizada do Handy num Mac (Apple Silicon).
 #
 # O que faz, em ordem (pode rodar de novo quantas vezes quiser; pula o que já existe):
 #   1. Confere o Mac (Apple Silicon, memória, espaço, Command Line Tools)
@@ -10,14 +10,14 @@
 #   6. Aplica as configurações de profile.json (atalhos, prompt, idiomas...)
 #   7. Coloca Handy e Ollama para abrir junto com o Mac
 #
-# Uso:  bash vocal-assistent/install-macos.sh
+# Uso:  bash personal/install-macos.sh
 # Nunca pede senha. Ao final, a pessoa precisa liberar Acessibilidade e Microfone.
 
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$HERE/.." && pwd)"   # raiz do repositório vocal-assistent (código do Handy já modificado)
-[ -d "$REPO/src-tauri" ] || { echo "Rode este script de dentro do repositório vocal-assistent clonado."; exit 1; }
+REPO="$(cd "$HERE/.." && pwd)"   # raiz do repositório personal-assistant (código do Handy já modificado)
+[ -d "$REPO/src-tauri" ] || { echo "Rode este script de dentro do repositório personal-assistant clonado."; exit 1; }
 APP=/Applications/Handy.app
 BUNDLE_ID=com.pais.handy
 DATA="$HOME/Library/Application Support/$BUNDLE_ID"
@@ -130,7 +130,7 @@ if [ ! -f "$SETTINGS" ]; then
   [ -f "$SETTINGS" ] || die "O Handy não criou $SETTINGS."
 fi
 quit_handy
-cp "$SETTINGS" "$SETTINGS.antes-vocal-assistent"
+cp "$SETTINGS" "$SETTINGS.antes-personal-assistant"
 python3 - "$SETTINGS" "$HERE" <<'PY'
 import json, sys, os
 path, here = sys.argv[1], sys.argv[2]
@@ -147,10 +147,10 @@ s["post_process_prompts"].append({"id": p["id"], "name": p["name"], "prompt": te
 s.update(prof)
 json.dump(data, open(path, "w"), indent=2, ensure_ascii=False)
 PY
-ok "Configurações aplicadas (cópia da anterior: settings_store.json.antes-vocal-assistent)"
+ok "Configurações aplicadas (cópia da anterior: settings_store.json.antes-personal-assistant)"
 mkdir -p "$DATA/commands"
-ln -sf "$HERE/commands/vocal_commands.py" "$DATA/commands/vocal_commands.py"
-ok "Comandos de voz (\"Computador, ...\") ligados a $HERE/commands/vocal_commands.py"
+ln -sf "$HERE/commands/commands.py" "$DATA/commands/commands.py"
+ok "Comandos de voz (\"Monatela, ...\") ligados a $HERE/commands/commands.py"
 
 # ---------------------------------------------------------------- 7. abrir com o Mac
 step "7/7 Abrir junto com o Mac"

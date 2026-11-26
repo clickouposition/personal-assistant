@@ -1,4 +1,4 @@
-# VOCAL-ASSISTENT
+# Personal Assistant
 
 Versão personalizada do [Handy](https://github.com/cjpais/Handy) (ditado por voz open source, licença MIT) para quem fala **português e inglês** no trabalho.
 
@@ -23,7 +23,7 @@ Comece a fala com **"Monatela"** e, em vez de colar texto, o Mac executa a açã
 |---|---|
 | "Monatela, abre o Slack no grupo marketing" | Abre o Slack direto na conversa |
 | "Monatela, abre o projeto Cliente X no Reaper" | Acha o `.rpp` mais recente com esse nome e abre no REAPER |
-| "Monatela, abre o projeto vocal assistent no VS Code" | Acha a pasta do projeto e abre no VS Code |
+| "Monatela, abre o projeto personal assistant no VS Code" | Acha a pasta do projeto e abre no VS Code |
 | "Monatela, fecha as abas do Chrome" / "fecha essa aba" / "fecha as outras abas" | Fecha abas (Cmd+Shift+T reabre) |
 | "Monatela, abre o Spotify" / "fecha o Spotify" | Abre ou fecha qualquer app instalado |
 | "Monatela, abre o WhatsApp na conversa com a Maria" | Abre o WhatsApp direto na conversa |
@@ -39,7 +39,7 @@ Comece a fala com **"Monatela"** e, em vez de colar texto, o Mac executa a açã
 
 O resultado aparece numa notificação do macOS. Para escrever mensagens, o texto passa pela área de transferência, que é restaurada logo depois. A IA local **só escolhe** uma ação dessa lista; o código é que executa. Nenhum comando livre é rodado, então uma transcrição errada não apaga nada. Na primeira vez que controlar o Chrome ou o Slack, o macOS pede permissão de **Automação** para o Handy: clique em **OK**.
 
-Projetos são procurados em Mesa, Documentos, Developer, Projects, Música e Downloads (até 3 níveis). Registro de tudo em `~/Library/Logs/com.pais.handy/vocal-commands.log`.
+Projetos são procurados em Mesa, Documentos, Developer, Projects, Música e Downloads (até 3 níveis). Registro de tudo em `~/Library/Logs/com.pais.handy/personal-assistant.log`.
 
 **Slack pelo contexto (opcional, recomendado):** com uma chave só de leitura do Slack, o comando conhece **todos** os seus canais, grupos e DMs, entende de qual você está falando ("Wesley Chapel suporte" → `#lc-wesley-chapel-support`) e abre direto, sem digitar na busca. Sem a chave, ele digita o nome na busca do Slack.
 
@@ -49,12 +49,12 @@ Projetos são procurados em Mesa, Documentos, Developer, Projects, Música e Dow
 4. Em **OAuth & Permissions**, copie o **User OAuth Token** (começa com `xoxp-`).
 5. No Terminal, rode o comando abaixo e cole o token quando ele pedir (ele fica no **Keychain** do Mac, não em arquivo):
    ```bash
-   security add-generic-password -a "$USER" -s vocal-assistent-slack -U -w
+   security add-generic-password -a "$USER" -s personal-assistant-slack -U -w
    ```
 
-A lista fica em cache por 6 horas (e é atualizada sozinha se você falar de um canal novo). Para remover: `security delete-generic-password -s vocal-assistent-slack`.
+A lista fica em cache por 6 horas (e é atualizada sozinha se você falar de um canal novo). Para remover: `security delete-generic-password -s personal-assistant-slack`.
 
-**Criar uma ação nova:** em `commands/vocal_commands.py`, escreva uma função `act_<nome>(params)`, descreva em `ACTION_HELP` e acrescente o nome no `enum` do `SCHEMA`. Vale na hora, sem recompilar.
+**Criar uma ação nova:** em `commands/commands.py`, escreva uma função `act_<nome>(params)`, descreva em `ACTION_HELP` e acrescente o nome no `enum` do `SCHEMA`. Vale na hora, sem recompilar.
 
 ### Segurar ou mãos livres
 
@@ -75,14 +75,14 @@ Tudo roda **no próprio Mac, grátis e offline**: Whisper Large v3 Turbo transcr
 ```bash
 git clone https://github.com/clickouposition/personal-assistant.git
 cd personal-assistant
-bash vocal-assistent/install-macos.sh
+bash personal/install-macos.sh
 ```
 
 Este repositório é o Handy **v0.10.2** já com as mudanças. O instalador compila e instala a partir dele.
 
 Leva de 15 a 30 minutos, quase tudo é download e compilação. Pode rodar de novo sem problema: ele pula o que já está instalado.
 
-Com uma IA (Claude Code etc.), basta pedir: *"clone github.com/clickouposition/personal-assistant e instale seguindo vocal-assistent/SKILL.md"*.
+Com uma IA (Claude Code etc.), basta pedir: *"clone github.com/clickouposition/personal-assistant e instale seguindo personal/SKILL.md"*.
 
 Depois, só você pode fazer estas duas coisas:
 1. **Ajustes do Sistema → Privacidade e Segurança → Acessibilidade** → ative o **Handy**
@@ -92,7 +92,7 @@ Depois, só você pode fazer estas duas coisas:
 
 Se você é uma IA instalando isto para alguém:
 
-1. Siga o [`SKILL.md`](SKILL.md). Em resumo: na raiz do repositório, rode `bash vocal-assistent/install-macos.sh`. Ele não pede senha e para com uma mensagem clara se algo faltar.
+1. Siga o [`SKILL.md`](SKILL.md). Em resumo: na raiz do repositório, rode `bash personal/install-macos.sh`. Ele não pede senha e para com uma mensagem clara se algo faltar.
 2. Se ele parar pedindo as **Command Line Tools**, a pessoa precisa clicar em *Instalar* na janela do macOS. Depois rode o script de novo.
 3. Você **não consegue** liberar Acessibilidade nem Microfone. Peça para a pessoa fazer (instruções no fim do script). Para confirmar que deu certo, procure `Shortcuts initialized successfully` em `~/Library/Logs/com.pais.handy/handy.log`.
 4. Se o log mostrar `SecureInput`, um campo de senha ou o "Entrada de Teclado Segura" do Terminal está bloqueando atalhos. Peça para fechar.
@@ -106,7 +106,7 @@ Tudo marcado com `// [custom]` no código:
 |---|---|
 | `src-tauri/src/custom_lang.rs` | **Novo.** Detecta pedidos de tradução e o idioma falado, e manda uma ordem clara para a IA (modelos pequenos erram o idioma sozinhos). Tem testes. |
 | `src-tauri/src/custom_autostop.rs` | **Novo.** No modo mãos livres, finaliza a gravação sozinho depois de ~1,5 s de silêncio após a fala (com testes). Ligado no coordenador e no detector de voz (`transcription_coordinator.rs`, `audio_toolkit/audio/sink.rs`) |
-| `src-tauri/src/custom_commands.rs` | **Novo.** Se a fala começa com "Monatela", não cola: chama `commands/vocal_commands.py` (com testes) |
+| `src-tauri/src/custom_commands.rs` | **Novo.** Se a fala começa com "Monatela", não cola: chama `commands/commands.py` (com testes) |
 | `src-tauri/src/actions.rs` | Liga a detecção de idioma ao pós-processamento (placeholder `${language_directive}` no prompt) |
 | `src-tauri/src/llm_client.rs` | Pede ao Ollama para manter o modelo sempre carregado (`keep_alive`), sem atraso de "modelo frio" |
 | `src-tauri/src/settings.rs` | Padrões: atalhos, Ollama + `gemma4:e4b`, prompt "Auto PT/EN", colagem confiável, Whisper sempre carregado, sem atualização automática |
@@ -116,7 +116,7 @@ Arquivos desta pasta:
 - `install-macos.sh`: o instalador
 - `profile.json`: configurações aplicadas pelo instalador (também valem para quem já tinha o Handy)
 - `prompts/auto-pt-en.txt`: o prompt de correção/tradução
-- `commands/vocal_commands.py`: os comandos de voz (lista de ações permitidas)
+- `commands/commands.py`: os comandos de voz (lista de ações permitidas)
 
 ## Personalizar
 
@@ -132,7 +132,7 @@ Esta versão **não se atualiza sozinha** (o atualizador trocaria pela versão o
 git remote add upstream https://github.com/cjpais/Handy.git   # só na primeira vez
 git fetch upstream --tags
 git merge v0.11.0              # a versão nova; resolva conflitos nos arquivos marcados com [custom]
-bash vocal-assistent/install-macos.sh
+bash personal/install-macos.sh
 ```
 
 Cada nova compilação pede para liberar a **Acessibilidade** de novo. É normal para apps compilados em casa.

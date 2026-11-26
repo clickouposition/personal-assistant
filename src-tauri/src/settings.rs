@@ -1097,8 +1097,8 @@ pub fn get_default_settings() -> AppSettings {
         audio_feedback: true, // [custom]
         audio_feedback_volume: default_audio_feedback_volume(),
         sound_theme: default_sound_theme(),
-        start_hidden: true,       // [custom]
-        autostart_enabled: true,  // [custom]
+        start_hidden: true,           // [custom]
+        autostart_enabled: true,      // [custom]
         update_checks_enabled: false, // [custom] build própria: não trocar pela oficial
         show_whats_new_on_update: default_show_whats_new_on_update(),
         whats_new_last_seen_version: default_whats_new_last_seen_version(),
@@ -1124,7 +1124,7 @@ pub fn get_default_settings() -> AppSettings {
         clipboard_handling: ClipboardHandling::default(),
         auto_submit: default_auto_submit(),
         auto_submit_key: AutoSubmitKey::default(),
-        post_process_enabled: true, // [custom]
+        post_process_enabled: true,                     // [custom]
         post_process_provider_id: "custom".to_string(), // [custom] Ollama local (localhost:11434)
         post_process_providers: default_post_process_providers(),
         post_process_api_keys: default_post_process_api_keys(),
@@ -1142,7 +1142,7 @@ pub fn get_default_settings() -> AppSettings {
         show_tray_icon: default_show_tray_icon(),
         paste_delay_ms: default_paste_delay_ms(),
         paste_delay_after_ms: default_paste_delay_after_ms(),
-        reliable_paste: true,       // [custom] evita colar o clipboard antigo
+        reliable_paste: true, // [custom] evita colar o clipboard antigo
         typing_tool: default_typing_tool(),
         external_script_path: None,
         filler_word_removal_enabled: default_filler_word_removal_enabled(),
